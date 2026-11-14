@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/dolibarr_api.dart';
+import 'order_detail_screen.dart';
 
 class OrdersScreen extends StatefulWidget {
   final DolibarrApiService api;
@@ -88,12 +89,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           }
                           final total = double.tryParse(o['total_ttc']?.toString() ?? '0') ?? 0;
                           return Card(
+                            clipBehavior: Clip.antiAlias,
                             child: ListTile(
+                              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OrderDetailScreen(api: widget.api, orderId: int.tryParse(o['id']?.toString() ?? '0') ?? 0, orderRef: o['ref']?.toString() ?? o['id']?.toString() ?? ''))),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                               leading: Container(
                                 width: 44, height: 44,
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF1565C0).withOpacity(0.1),
+                                  color: const Color(0xFF1565C0).withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: const Icon(Icons.shopping_bag_outlined, color: Color(0xFF1565C0)),
@@ -105,7 +108,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: _statusColor(o['statut']).withOpacity(0.15),
+                                    color: _statusColor(o['statut']).withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(_statusLabel(o['statut']),

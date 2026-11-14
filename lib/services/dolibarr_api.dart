@@ -216,3 +216,41 @@ class ApiException implements Exception {
   @override
   String toString() => message;
 }
+// EXTENSION — ajoutée par Claude (phase 2)
+extension OrderDetailApi on DolibarrApiService {
+  Future<Map<String, dynamic>> getOrder(int orderId) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/orders/$orderId');
+    final res = await http.get(uri, headers: _headers);
+    _checkResponse(res);
+    return json.decode(res.body) as Map<String, dynamic>;
+  }
+
+  Future<List<Map<String, dynamic>>> getOrderLines(int orderId) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/orders/$orderId/lines');
+    final res = await http.get(uri, headers: _headers);
+    if (res.statusCode == 404) return [];
+    _checkResponse(res);
+    final List data = json.decode(res.body);
+    return data.cast<Map<String, dynamic>>();
+  }
+
+  Future<void> updateOrderLine(int orderId, int lineId, double qty) async {
+    final body = json.encode({'qty': qty});
+    final uri = Uri.parse('${ApiConfig.baseUrl}/orders/$orderId/lines/$lineId');
+    final res = await http.put(uri, headers: _headers, body: body);
+    _checkResponse(res);
+  }
+
+  Future<void> deleteOrderLine(int orderId, int lineId) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/orders/$orderId/lines/$lineId');
+    final res = await http.delete(uri, headers: _headers);
+    _checkResponse(res);
+  }
+
+  Future<void> cancelOrder(int orderId) async {
+    final body = json.encode({'notrigger': 0});
+    final uri = Uri.parse('${ApiConfig.baseUrl}/orders/$orderId/cancel');
+    final res = await http.post(uri, headers: _headers, body: body);
+    _checkResponse(res);
+  }
+}

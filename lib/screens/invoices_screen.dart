@@ -92,7 +92,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                               leading: Container(
                                 width: 44, height: 44,
                                 decoration: BoxDecoration(
-                                  color: Colors.green.withOpacity(0.1),
+                                  color: Colors.green.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: const Icon(Icons.receipt_long, color: Colors.green),
@@ -104,7 +104,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: _statusColor(inv['statut']).withOpacity(0.15),
+                                    color: _statusColor(inv['statut']).withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(_statusLabel(inv['statut']),
