@@ -39,9 +39,7 @@ class _CartScreenState extends State<CartScreen> {
           unitPrice: item.product.price,
         );
       }
-      // 3. Valider
-      await widget.api.validateOrder(orderId);
-
+      // 3. Commande créée en Brouillon — le client valide depuis Mes commandes
       cart.clear();
       if (mounted) {
         Navigator.pushReplacement(
