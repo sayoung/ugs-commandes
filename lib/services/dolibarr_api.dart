@@ -120,19 +120,40 @@ class DolibarrApiService {
 
   // ── Commandes ─────────────────────────────────────────────────────────────
 
-  Future<List<Map<String, dynamic>>> getClientOrders(int socid) async {
+  Future<List<Map<String, dynamic>>> getClientOrders(int socid, {int? status}) async {
+    final filters = <String>["(t.fk_soc:=:$socid)"];
+    if (status != null) {
+      filters.add("(t.fk_statut:=:$status)");
+    }
     final params = {
       'sortfield': 't.date_commande',
       'sortorder': 'DESC',
       'limit': '50',
-      'sqlfilters': "(t.fk_soc:=:$socid)",
+      'sqlfilters': filters.join(' and '),
     };
     final uri = Uri.parse('${ApiConfig.baseUrl}/orders').replace(queryParameters: params);
     final res = await http.get(uri, headers: _headers);
     if (res.statusCode == 404) return [];
     _checkResponse(res);
-    final List data = json.decode(res.body);
-    return data.cast<Map<String, dynamic>>();
+    final decoded = json.decode(res.body);
+    if (decoded is List) {
+      final list = <Map<String, dynamic>>[];
+      for (final item in decoded) {
+        if (item is Map<String, dynamic>) {
+          list.add(item);
+        } else if (item is Map) {
+          final mapped = <String, dynamic>{};
+          item.forEach((dynamic k, dynamic v) {
+            if (k != null) {
+              mapped[k.toString()] = v;
+            }
+          });
+          list.add(mapped);
+        }
+      }
+      return list;
+    }
+    return [];
   }
 
   Future<int> createOrder({required int thirdPartyId, String? note}) async {
