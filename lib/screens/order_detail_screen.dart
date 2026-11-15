@@ -89,7 +89,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Future<void> _editLineQty(Map<String, dynamic> line) async {
-    final lineId = int.tryParse(line['id']?.toString() ?? '0') ?? 0;
+    // DEBUG — à supprimer après test
+    debugPrint('LINE KEYS: \${line.keys.toList()}');
+    debugPrint('LINE id=\${line['id']} rowid=\${line['rowid']}');
+    final lineId = int.tryParse(
+      (line['rowid'] ?? line['id'])?.toString() ?? '0') ?? 0;
     final currentQty = double.tryParse(line['qty']?.toString() ?? '1') ?? 1;
     final ctrl = TextEditingController(text: currentQty.toStringAsFixed(0));
     final result = await showDialog<double>(
@@ -131,7 +135,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Future<void> _deleteLine(Map<String, dynamic> line) async {
-    final lineId = int.tryParse(line['id']?.toString() ?? '0') ?? 0;
+    final lineId = int.tryParse((line['rowid'] ?? line['id'])?.toString() ?? '0') ?? 0;
     final label = line['product_label']?.toString() ?? line['label']?.toString() ?? 'ce produit';
     final ok = await _confirm('Supprimer la ligne ?', 'Supprimer "$label" de la commande ?');
     if (!ok) return;
