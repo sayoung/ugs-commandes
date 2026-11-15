@@ -261,7 +261,7 @@ extension OrderDetailApi on DolibarrApiService {
       if (unitPrice != null) 'subprice': unitPrice,
       if (vatRate != null) 'tva_tx': vatRate,
     });
-    final uri = Uri.parse('\${ApiConfig.baseUrl}/orders/$orderId/lines/$lineId');
+    final uri = Uri.parse('${ApiConfig.baseUrl}/orders/$orderId/lines/$lineId');
     final res = await http.put(uri, headers: _headers, body: body);
     _checkResponse(res);
   }
