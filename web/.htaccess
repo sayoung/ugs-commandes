@@ -1,0 +1,23 @@
+# UGS Commandes (PWA) — configuration Apache
+
+# Forcer HTTPS (obligatoire pour une PWA)
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} !=on
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+# Ne jamais mettre en cache les fichiers qui pilotent les mises à jour
+<IfModule mod_headers.c>
+  <FilesMatch "^(index\.html|flutter_service_worker\.js|flutter_bootstrap\.js|manifest\.json|version\.json)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
+# Compression
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json application/wasm image/svg+xml
+</IfModule>
+
+AddType application/wasm .wasm
+AddType application/manifest+json .webmanifest

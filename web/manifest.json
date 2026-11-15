@@ -1,11 +1,13 @@
 {
-    "name": "ugs_commandes",
-    "short_name": "ugs_commandes",
+    "name": "UGS Commandes",
+    "short_name": "UGS",
+    "description": "Passez et suivez vos commandes UGS",
+    "lang": "fr",
     "start_url": ".",
+    "scope": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#1565C0",
+    "theme_color": "#0D47A1",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
