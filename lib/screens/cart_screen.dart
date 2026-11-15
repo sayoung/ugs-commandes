@@ -19,7 +19,7 @@ class _CartScreenState extends State<CartScreen> {
   Future<void> _placeOrder(CartProvider cart) async {
     if (cart.thirdPartyId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez sélectionner un client'), backgroundColor: Colors.orange),
+        const SnackBar(content: Text('Session expirée. Reconnectez-vous.'), backgroundColor: Colors.orange),
       );
       return;
     }
@@ -56,121 +56,230 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
-  Future<void> _pickClient(CartProvider cart) async {
-    try {
-      final clients = await widget.api.getThirdParties();
-      if (!mounted) return;
-      showModalBottomSheet(
-        context: context,
-        builder: (_) => ListView.builder(
-          itemCount: clients.length,
-          itemBuilder: (_, i) {
-            final c = clients[i];
-            return ListTile(
-              title: Text(c['name']?.toString() ?? ''),
-              subtitle: Text(c['code_client']?.toString() ?? ''),
-              onTap: () {
-                cart.setClient(
-                  int.parse(c['id'].toString()),
-                  c['name']?.toString() ?? '',
-                );
-                Navigator.pop(context);
-              },
-            );
-          },
+  static const _blue = Color(0xFF1565C0);
+  static const double _vatRate = 20; // taux appliqué aux lignes envoyées à Dolibarr
+
+  Widget _totalRow(String label, double amount, {bool strong = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(children: [
+        Expanded(
+          child: Text(label,
+              style: TextStyle(
+                  fontSize: strong ? 16 : 14,
+                  fontWeight: strong ? FontWeight.bold : FontWeight.normal,
+                  color: strong ? Colors.black87 : Colors.grey[700])),
         ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
-      );
-    }
+        Text('${amount.toStringAsFixed(2)} DH',
+            style: TextStyle(
+                fontSize: strong ? 20 : 14,
+                fontWeight: strong ? FontWeight.bold : FontWeight.w500,
+                color: strong ? _blue : Colors.black87)),
+      ]),
+    );
+  }
+
+  Widget _itemCard(CartProvider cart, CartItem item) {
+    return Card(
+      elevation: 0,
+      color: Colors.white,
+      margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: Colors.grey[300]!),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(children: [
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE3F2FD),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.inventory_2_outlined, color: _blue),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(item.product.label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                if (item.product.ref.isNotEmpty)
+                  Text(item.product.ref,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                const SizedBox(height: 2),
+                Text('${item.product.price.toStringAsFixed(2)} DH HT / unité',
+                    style: TextStyle(fontSize: 12.5, color: Colors.grey[700])),
+              ]),
+            ),
+            IconButton(
+              tooltip: 'Retirer du panier',
+              icon: const Icon(Icons.delete_outline, color: Colors.red),
+              onPressed: () => cart.removeProduct(item.product.id),
+            ),
+          ]),
+          const SizedBox(height: 8),
+          Row(children: [
+            Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: _blue),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                IconButton(
+                  tooltip: 'Diminuer',
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.remove, color: _blue),
+                  onPressed: () => cart.updateQuantity(item.product.id, item.quantity - 1),
+                ),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 32),
+                  child: Text('${item.quantity}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                ),
+                IconButton(
+                  tooltip: 'Augmenter',
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.add, color: _blue),
+                  onPressed: () => cart.updateQuantity(item.product.id, item.quantity + 1),
+                ),
+              ]),
+            ),
+            const Spacer(),
+            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              Text('Sous-total HT', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+              Text('${item.subtotal.toStringAsFixed(2)} DH',
+                  style: const TextStyle(
+                      fontSize: 17, fontWeight: FontWeight.bold, color: _blue)),
+            ]),
+          ]),
+        ]),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final cart = context.watch<CartProvider>();
+    final totalHt = cart.total;
+    final totalVat = totalHt * _vatRate / 100;
     return Scaffold(
-      appBar: AppBar(title: const Text('Panier')),
+      backgroundColor: const Color(0xFFF4F6FA),
+      appBar: AppBar(
+        title: Text(cart.itemCount == 0 ? 'Mon panier' : 'Mon panier (${cart.itemCount})'),
+      ),
       body: cart.items.isEmpty
-          ? const Center(child: Text('Panier vide'))
-          : Column(
-              children: [
-                // Client selector
-                ListTile(
-                  leading: const Icon(Icons.person),
-                  title: Text(cart.thirdPartyName ?? 'Sélectionner un client'),
-                  trailing: const Icon(Icons.chevron_right),
-                  tileColor: cart.thirdPartyId == null ? Colors.orange[50] : null,
-                  onTap: () => _pickClient(cart),
+          ? Center(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.shopping_cart_outlined, size: 72, color: Colors.grey[400]),
+                const SizedBox(height: 12),
+                const Text('Votre panier est vide',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text('Ajoutez des produits depuis le catalogue',
+                    style: TextStyle(color: Colors.grey[600])),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.arrow_back),
+                  label: const Text('Retour'),
                 ),
-                const Divider(height: 1),
-                // Items
-                Expanded(
-                  child: ListView(
-                    children: cart.items.values.map((item) => ListTile(
-                      title: Text(item.product.label),
-                      subtitle: Text('${item.product.price.toStringAsFixed(2)} DH × ${item.quantity}'),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
+              ]),
+            )
+          : Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: ListView(
+                        padding: const EdgeInsets.all(12),
                         children: [
-                          Text('${item.subtotal.toStringAsFixed(2)} DH',
-                              style: const TextStyle(fontWeight: FontWeight.bold)),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            icon: const Icon(Icons.remove_circle_outline),
-                            onPressed: () => cart.updateQuantity(item.product.id, item.quantity - 1),
+                          // Client
+                          Card(
+                            elevation: 0,
+                            color: Colors.white,
+                            margin: const EdgeInsets.only(bottom: 12),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14)),
+                            child: ListTile(
+                              leading: const CircleAvatar(
+                                backgroundColor: Color(0xFFE3F2FD),
+                                child: Icon(Icons.business, color: _blue),
+                              ),
+                              title: Text(cart.thirdPartyName ?? '—',
+                                  style: const TextStyle(fontWeight: FontWeight.w600)),
+                              subtitle: const Text('Commande pour ce compte'),
+                            ),
                           ),
-                          Text('${item.quantity}'),
-                          IconButton(
-                            icon: const Icon(Icons.add_circle_outline),
-                            onPressed: () => cart.updateQuantity(item.product.id, item.quantity + 1),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4, bottom: 8),
+                            child: Text(
+                              cart.items.length == 1
+                                  ? '1 produit'
+                                  : '${cart.items.length} produits',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            ),
+                          ),
+                          ...cart.items.values.map((item) => _itemCard(cart, item)),
+                          const SizedBox(height: 4),
+                          TextField(
+                            controller: _noteCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'Note pour UGS (optionnel)',
+                              border: OutlineInputBorder(),
+                              filled: true,
+                              fillColor: Colors.white,
+                            ),
+                            onChanged: cart.setNote,
+                            maxLines: 2,
                           ),
                         ],
                       ),
-                    )).toList(),
-                  ),
-                ),
-                // Note
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: TextField(
-                    controller: _noteCtrl,
-                    decoration: const InputDecoration(labelText: 'Note (optionnel)', border: OutlineInputBorder()),
-                    onChanged: cart.setNote,
-                    maxLines: 2,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                // Total + bouton
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    border: const Border(top: BorderSide(color: Colors.grey, width: 0.5)),
-                  ),
-                  child: Row(
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Total', style: TextStyle(color: Colors.grey)),
-                          Text('${cart.total.toStringAsFixed(2)} DH',
-                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    ),
+                    // Récapitulatif + bouton
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        boxShadow: [
+                          BoxShadow(color: Color(0x22000000), blurRadius: 8, offset: Offset(0, -2)),
                         ],
                       ),
-                      const Spacer(),
-                      FilledButton.icon(
-                        onPressed: _placing ? null : () => _placeOrder(cart),
-                        icon: _placing
-                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                            : const Icon(Icons.send),
-                        label: const Text('Passer la commande'),
+                      child: SafeArea(
+                        top: false,
+                        child: Column(mainAxisSize: MainAxisSize.min, children: [
+                          _totalRow('Total HT', totalHt),
+                          _totalRow('TVA (${_vatRate.toStringAsFixed(0)} %)', totalVat),
+                          const Divider(height: 14),
+                          _totalRow('Total TTC', totalHt + totalVat, strong: true),
+                          const SizedBox(height: 10),
+                          FilledButton.icon(
+                            onPressed: _placing ? null : () => _placeOrder(cart),
+                            icon: _placing
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2, color: Colors.white))
+                                : const Icon(Icons.send),
+                            label: const Text('Passer la commande'),
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size.fromHeight(50),
+                              backgroundColor: _blue,
+                            ),
+                          ),
+                        ]),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
     );
   }
