@@ -115,9 +115,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       ),
     );
     if (result == null || result == currentQty) return;
+    final unitPrice = double.tryParse(line['subprice']?.toString() ?? '0') ?? 0;
+    final vatRate = double.tryParse(line['tva_tx']?.toString() ?? '20') ?? 20;
     setState(() => _actionLoading = true);
     try {
-      await widget.api.updateOrderLine(widget.orderId, lineId, result);
+      await widget.api.updateOrderLine(widget.orderId, lineId, result,
+          unitPrice: unitPrice, vatRate: vatRate);
       await _load();
     } on ApiException catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(

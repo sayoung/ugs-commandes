@@ -255,9 +255,13 @@ extension OrderDetailApi on DolibarrApiService {
     return data.cast<Map<String, dynamic>>();
   }
 
-  Future<void> updateOrderLine(int orderId, int lineId, double qty) async {
-    final body = json.encode({'qty': qty});
-    final uri = Uri.parse('${ApiConfig.baseUrl}/orders/$orderId/lines/$lineId');
+  Future<void> updateOrderLine(int orderId, int lineId, double qty, {double? unitPrice, double? vatRate}) async {
+    final body = json.encode({
+      'qty': qty,
+      if (unitPrice != null) 'subprice': unitPrice,
+      if (vatRate != null) 'tva_tx': vatRate,
+    });
+    final uri = Uri.parse('\${ApiConfig.baseUrl}/orders/$orderId/lines/$lineId');
     final res = await http.put(uri, headers: _headers, body: body);
     _checkResponse(res);
   }
