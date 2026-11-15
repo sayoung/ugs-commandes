@@ -89,9 +89,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Future<void> _editLineQty(Map<String, dynamic> line) async {
-    // DEBUG — à supprimer après test
-    debugPrint('LINE KEYS: \${line.keys.toList()}');
-    debugPrint('LINE id=\${line['id']} rowid=\${line['rowid']}');
+    // DEBUG
+    debugPrint("LINE KEYS: \${line.keys.toList()}");
+    debugPrint("LINE id=\${line["id"]} rowid=\${line["rowid"]}");
     final lineId = int.tryParse(
       (line['rowid'] ?? line['id'])?.toString() ?? '0') ?? 0;
     final currentQty = double.tryParse(line['qty']?.toString() ?? '1') ?? 1;
