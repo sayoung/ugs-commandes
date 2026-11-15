@@ -15,13 +15,13 @@ class OrderSuccessScreen extends StatelessWidget {
             children: [
               const Icon(Icons.check_circle, size: 80, color: Colors.green),
               const SizedBox(height: 16),
-              const Text('Commande envoyée !', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              const Text('Commande enregistrée !', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              Text('Commande #$orderId créée dans Dolibarr', style: const TextStyle(color: Colors.grey)),
+              Text('Commande #$orderId créée en brouillon. Validez-la depuis Mes commandes.', textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey)),
               const SizedBox(height: 32),
               FilledButton(
                 onPressed: () => Navigator.popUntil(context, (r) => r.isFirst),
-                child: const Text('Nouvelle commande'),
+                child: const Text('Retour à l\'accueil'),
               ),
             ],
           ),

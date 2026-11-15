@@ -61,8 +61,6 @@ class CartProvider extends ChangeNotifier {
 
   void clear() {
     _items.clear();
-    _selectedThirdPartyId = null;
-    _selectedThirdPartyName = null;
     _note = '';
     notifyListeners();
   }

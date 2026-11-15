@@ -21,6 +21,12 @@ class AuthService {
     String? phone,
   }) async {
     final api = DolibarrApiService(apiKey: ApiConfig.apiKey);
+    // Empêcher les doublons : un seul tiers par email
+    final existing = await api.findThirdPartyByEmail(email);
+    if (existing != null) {
+      throw ApiException(
+          'Un compte existe déjà avec cet email. Connectez-vous avec votre mot de passe.', 409);
+    }
     final id = await api.createThirdParty(
       denomination: denomination,
       ice: ice,

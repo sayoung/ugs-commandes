@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/dolibarr_api.dart';
 import '../widgets/order_timeline.dart';
+import 'product_picker_screen.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   final DolibarrApiService api;
@@ -122,6 +123,54 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       await widget.api.updateOrderLine(widget.orderId, lineId, result,
           unitPrice: unitPrice, vatRate: vatRate);
       await _load();
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message), backgroundColor: Colors.red));
+    } finally {
+      if (mounted) setState(() => _actionLoading = false);
+    }
+  }
+
+  Future<void> _addProduct() async {
+    final picked = await Navigator.push<ProductPickerResult>(
+      context,
+      MaterialPageRoute(builder: (_) => ProductPickerScreen(api: widget.api)),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _actionLoading = true);
+    try {
+      // Produit déjà présent dans la commande : on augmente la quantité de la ligne
+      Map<String, dynamic>? existing;
+      for (final l in _lines) {
+        if (l['fk_product']?.toString() == picked.product.id.toString()) {
+          existing = l;
+          break;
+        }
+      }
+      if (existing != null) {
+        final lineId = int.tryParse((existing['rowid'] ?? existing['id'])?.toString() ?? '0') ?? 0;
+        final currentQty = double.tryParse(existing['qty']?.toString() ?? '0') ?? 0;
+        await widget.api.updateOrderLine(
+          widget.orderId,
+          lineId,
+          currentQty + picked.qty,
+          unitPrice: double.tryParse(existing['subprice']?.toString() ?? '0') ?? 0,
+          vatRate: double.tryParse(existing['tva_tx']?.toString() ?? '20') ?? 20,
+        );
+      } else {
+        await widget.api.addOrderLine(
+          orderId: widget.orderId,
+          productId: picked.product.id,
+          qty: picked.qty,
+          unitPrice: picked.product.price,
+        );
+      }
+      await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('${picked.product.label} ajouté ✓'),
+            backgroundColor: Colors.green));
+      }
     } on ApiException catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(e.message), backgroundColor: Colors.red));
@@ -320,8 +369,17 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         if (_actionLoading)
                           const Center(child: CircularProgressIndicator())
                         else ...[
+                          OutlinedButton.icon(
+                            onPressed: _addProduct,
+                            icon: const Icon(Icons.add_shopping_cart),
+                            label: const Text('Ajouter un produit'),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(48),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
                           FilledButton.icon(
-                            onPressed: _validate,
+                            onPressed: _lines.isEmpty ? null : _validate,
                             icon: const Icon(Icons.check_circle_outline),
                             label: const Text('Valider la commande'),
                             style: FilledButton.styleFrom(

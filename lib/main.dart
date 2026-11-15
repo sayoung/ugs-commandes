@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'providers/cart_provider.dart';
 import 'services/auth_service.dart';
 import 'screens/login_screen.dart';
-import 'screens/products_screen.dart';
+import 'screens/home_screen.dart';
 
 void main() {
   runApp(
@@ -74,7 +74,7 @@ class _AuthGateState extends State<AuthGate> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     if (_hasSession && _clientId != null) {
-      return ProductsScreen(
+      return HomeScreen(
         clientId: _clientId!,
         clientName: _clientName ?? '',
         onLogout: _onLogout,

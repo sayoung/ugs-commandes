@@ -91,30 +91,41 @@ class DolibarrApiService {
     return int.parse(json.decode(res.body).toString());
   }
 
-  Future<Map<String, dynamic>?> findThirdPartyByEmail(String email) async {
+  /// Tous les tiers ayant cet email (il peut y avoir des doublons historiques),
+  /// triés du plus ancien au plus récent.
+  Future<List<Map<String, dynamic>>> findThirdPartiesByEmail(String email) async {
     final params = {
       'mode': '1',
-      'limit': '5',
+      'limit': '50',
+      'sortfield': 't.rowid',
+      'sortorder': 'ASC',
       'sqlfilters': "(t.email:=:'${email.toLowerCase().trim()}')",
     };
     final uri = Uri.parse('${ApiConfig.baseUrl}/thirdparties').replace(queryParameters: params);
     final res = await http.get(uri, headers: _headers);
-    if (res.statusCode == 404) return null;
+    if (res.statusCode == 404) return [];
     _checkResponse(res);
     final List data = json.decode(res.body);
-    if (data.isEmpty) return null;
-    return data.first as Map<String, dynamic>;
+    return data.cast<Map<String, dynamic>>();
   }
 
+  Future<Map<String, dynamic>?> findThirdPartyByEmail(String email) async {
+    final list = await findThirdPartiesByEmail(email);
+    return list.isEmpty ? null : list.first;
+  }
+
+  /// Vérifie email + mot de passe. En cas de doublons, renvoie le tiers
+  /// le plus ancien dont le mot de passe correspond.
   Future<Map<String, dynamic>?> verifyCredentials(String email, String passwordHash) async {
-    final tiers = await findThirdPartyByEmail(email);
-    if (tiers == null) return null;
-    final notePrivate = tiers['note_private']?.toString() ?? '';
-    try {
-      final authData = json.decode(notePrivate) as Map<String, dynamic>;
-      final storedHash = authData['_ugs_hash']?.toString() ?? '';
-      if (storedHash == passwordHash) return tiers;
-    } catch (_) {}
+    final candidates = await findThirdPartiesByEmail(email);
+    for (final tiers in candidates) {
+      final notePrivate = tiers['note_private']?.toString() ?? '';
+      try {
+        final authData = json.decode(notePrivate) as Map<String, dynamic>;
+        final storedHash = authData['_ugs_hash']?.toString() ?? '';
+        if (storedHash == passwordHash) return tiers;
+      } catch (_) {}
+    }
     return null;
   }
 
